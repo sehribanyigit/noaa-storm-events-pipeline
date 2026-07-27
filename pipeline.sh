@@ -37,30 +37,46 @@ OUT_PARQUET="${PROCESSED_DIR}/storm_events_${YEAR}.parquet"
 # -----------------------------------------------------------------------------
 
 echo "[1/4] Setting up directories"
-# [TODO] Use mkdir -p to create RAW_DIR and PROCESSED_DIR. Both should be
-# safe to call even if the directories already exist.
+
+# Create the required project directories.
 mkdir -p "$RAW_DIR" "$PROCESSED_DIR"
+
+echo "✓ Directories are ready."
+echo
 
 # -----------------------------------------------------------------------------
 # Step 2: Download the raw file
 # -----------------------------------------------------------------------------
 
 echo "[2/4] Downloading ${FILE_NAME}"
-# [TODO] Use curl to download URL into RAW_GZ. Suggested flags:
-#   -L       follow redirects
-#   -o       write to a specific output file path
-#   --fail   exit non-zero on HTTP errors (4xx/5xx)
-#
-# Skip the download if the file already exists (idempotency).
+
+# Download the NOAA archive only if it does not already exist.
+# This keeps the pipeline idempotent and avoids unnecessary downloads.
+if [[ ! -f "$RAW_GZ" ]]; then
+    curl -L --fail -o "$RAW_GZ" "$URL"
+    echo "✓ Download completed."
+else
+    echo "✓ Raw archive already exists. Skipping download."
+fi
+
+echo
 
 # -----------------------------------------------------------------------------
 # Step 3: Decompress
 # -----------------------------------------------------------------------------
 
 echo "[3/4] Decompressing"
-# [TODO] Use gunzip to decompress RAW_GZ into RAW_CSV.
-# The -k flag keeps the original .gz so the pipeline can rerun.
-# Skip this step if RAW_CSV already exists.
+
+# Decompress the CSV only if it does not already exist.
+# Keep the original .gz file so the pipeline can be rerun.
+if [[ ! -f "$RAW_CSV" ]]; then
+    gunzip -k "$RAW_GZ"
+    echo "✓ Decompression completed."
+else
+    echo "✓ CSV already exists. Skipping decompression."
+fi
+
+echo
 
 # -----------------------------------------------------------------------------
 # Step 4: Convert CSV to GeoParquet
