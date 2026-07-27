@@ -3,12 +3,11 @@
 # pipeline.sh — Download a year of NOAA Storm Events, convert to GeoParquet.
 #
 # Usage:   ./pipeline.sh [YEAR]
-# Example: ./pipeline.sh 2024
+# Example: ./pipeline.sh 2025
 #
 # Requires: bash, curl, gunzip, ogr2ogr (GDAL >= 3.5)
-#
-# This is a starter scaffold. Read the comments. Replace the [TODO] markers
-# with the actual logic. Do not change the structure unless you have a reason.
+
+
 
 set -euo pipefail
 
@@ -17,7 +16,7 @@ set -euo pipefail
 # -----------------------------------------------------------------------------
 
 # Year to pull. Override by passing as the first argument.
-YEAR="${1:-2024}"
+YEAR="${1:-2025}"
 
 # NOAA file naming pattern. The "c{CREATED_DATE}" portion changes when NOAA
 # republishes a year. Look at https://www.ncei.noaa.gov/data/storm-events/files/
@@ -32,8 +31,7 @@ RAW_DIR="data/raw"
 PROCESSED_DIR="data/processed"
 RAW_GZ="${RAW_DIR}/${FILE_NAME}"
 RAW_CSV="${RAW_DIR}/${FILE_NAME%.gz}"
-OUT_PARQUET="${PROCESSED_DIR}/storms_${YEAR}.parquet"
-
+OUT_PARQUET="${PROCESSED_DIR}/storm_events_${YEAR}.parquet"
 # -----------------------------------------------------------------------------
 # Step 1: Set up directories
 # -----------------------------------------------------------------------------
@@ -41,6 +39,7 @@ OUT_PARQUET="${PROCESSED_DIR}/storms_${YEAR}.parquet"
 echo "[1/4] Setting up directories"
 # [TODO] Use mkdir -p to create RAW_DIR and PROCESSED_DIR. Both should be
 # safe to call even if the directories already exist.
+mkdir -p "$RAW_DIR" "$PROCESSED_DIR"
 
 # -----------------------------------------------------------------------------
 # Step 2: Download the raw file
