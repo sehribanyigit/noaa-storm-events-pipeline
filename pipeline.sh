@@ -11,16 +11,16 @@
 
 set -euo pipefail
 
-# -----------------------------------------------------------------------------
+## ---------------------------------------------------------------------------
 # Config
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
-# Year to pull. Override by passing as the first argument.
+# Year to download. Override the default by passing a year as the first argument.
 YEAR="${1:-2025}"
 
-# NOAA file naming pattern. The "c{CREATED_DATE}" portion changes when NOAA
-# republishes a year. Look at https://www.ncei.noaa.gov/data/storm-events/files/
-# and update CREATED_DATE for the year you want.
+# NOAA occasionally republishes annual files and changes the "c" date
+# in the filename. If the download returns a 404 error, check the NOAA
+# archive and update the value below.
 CREATED_DATE="20260728"
 
 BASE_URL="https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles"
@@ -29,14 +29,21 @@ URL="${BASE_URL}/${FILE_NAME}"
 
 RAW_DIR="data/raw"
 PROCESSED_DIR="data/processed"
+
 RAW_GZ="${RAW_DIR}/${FILE_NAME}"
 RAW_CSV="${RAW_DIR}/${FILE_NAME%.gz}"
+
 OUT_PARQUET="${PROCESSED_DIR}/storm_events_${YEAR}.parquet"
+
+
+# Record the pipeline start time.
+START_TIME=$(date +%s)
+
 # -----------------------------------------------------------------------------
 # Step 1: Set up directories
 # -----------------------------------------------------------------------------
 
-echo "[1/4] Setting up directories"
+echo "[1/5] Setting up directories"
 
 # Create the required project directories.
 mkdir -p "$RAW_DIR" "$PROCESSED_DIR"
@@ -48,7 +55,7 @@ echo
 # Step 2: Download the raw file
 # -----------------------------------------------------------------------------
 
-echo "[2/4] Downloading ${FILE_NAME}"
+echo "[2/5] Downloading ${FILE_NAME}"
 
 # Download the NOAA archive only if it does not already exist.
 # This keeps the pipeline idempotent and avoids unnecessary downloads.
@@ -65,7 +72,7 @@ echo
 # Step 3: Decompress
 # -----------------------------------------------------------------------------
 
-echo "[3/4] Decompressing"
+echo "[3/5] Decompressing"
 
 # Decompress the CSV only if it does not already exist.
 # Keep the original .gz file so the pipeline can be rerun.
@@ -82,7 +89,7 @@ echo
 # Step 4: Convert CSV to GeoParquet
 # -----------------------------------------------------------------------------
 
-echo "[4/4] Converting to GeoParquet"
+echo "[4/5] Converting to GeoParquet"
 
 # Convert the CSV into a spatial GeoParquet dataset.
 # The CSV stores longitude and latitude as separate columns.
@@ -145,6 +152,13 @@ echo "✓ GeoParquet validation completed."
 echo "  Total records         : ${TOTAL_ROWS}"
 echo "  Records with geometry : ${GEOMETRY_ROWS}"
 
+# Calculate total runtime.
+END_TIME=$(date +%s)
+RUNTIME=$((END_TIME - START_TIME))
+
+MINUTES=$((RUNTIME / 60))
+SECONDS=$((RUNTIME % 60))
+
 # ---------------------------------------------------------------------------
 # Pipeline summary
 # ---------------------------------------------------------------------------
@@ -153,3 +167,4 @@ echo
 echo "✓ Pipeline completed and validated successfully."
 echo "Output file : ${OUT_PARQUET}"
 echo "File size   : $(du -h "${OUT_PARQUET}" | cut -f1)"
+echo "Runtime     : ${MINUTES} min ${SECONDS} sec"
