@@ -4,9 +4,12 @@ A one-command pipeline that downloads a year of NOAA Storm Events data, converts
 
 ## What it does
 
-`pipeline.sh` takes a year (default: 2024), pulls the raw `details` file from NOAA's public archive, decompresses it, and converts it to a single GeoParquet file at `data/processed/storms_{YEAR}.parquet`.
+`pipeline.sh` takes a year (default: 2025), pulls the raw `details` file from NOAA's public archive, decompresses it, and converts it into a single analysis-ready GeoParquet dataset at `data/processed/storms_events_{YEAR}.parquet`.
 
-Total runtime: about 90 seconds for a typical year on a home internet connection.
+Typical runtime:
+
+- First run: about 1–2 minutes (download + conversion)
+- Subsequent runs: a few seconds thanks to the idempotent pipeline design
 
 ## The data
 
@@ -16,28 +19,56 @@ Total runtime: about 90 seconds for a typical year on a home internet connection
 
 ## How to run it
 
-Requires GDAL (for `ogr2ogr`) and standard Unix utilities (`curl`, `gunzip`).
+Requires:
+
+- GDAL (`ogr2ogr`)
+- curl
+- gunzip
+- DuckDB *(optional, used for output validation)*
 
 ```bash
-git clone https://github.com/{your-username}/noaa-storms-pipeline.git
-cd noaa-storms-pipeline
+git clone https://github.com/sehribanyigit/noaa-storm-events-pipeline.git
+cd noaa-storm-events-pipeline
 chmod +x pipeline.sh
 ./pipeline.sh
 ```
 
-To run for a specific year:
+To process a specific year:
 
 ```bash
-./pipeline.sh 2023
+./pipeline.sh YEAR
+
+# Example
+./pipeline.sh 2025
 ```
+
 
 ## What I learned
 
-[Two or three sentences. Be specific. What was harder than expected? What would you do differently? This is the part hiring managers actually read.]
+- Building an automated pipeline is more than downloading and converting data. I learned that making the workflow idempotent so it can be safely rerun without repeating unnecessary work.
+
+- Validating the GeoParquet output with DuckDB revealed that only about **44K of 72K** records contained valid coordinates. This reinforced the importance of verifying data quality instead of assuming every record can be converted into a spatial feature.
+
+- NOAA occasionally republishes annual datasets with updated filenames, which can break automated downloads. Keeping configuration values explicit made the pipeline easier to maintain and adapt when the source data changed.
 
 ## Stack
 
-- bash
+- Bash
+- Git
 - curl
 - GDAL / ogr2ogr
 - GeoParquet
+- DuckDB
+
+## Project structure
+
+```
+noaa-storm-events-pipeline/
+├── pipeline.sh
+├── README.md
+├── LICENSE
+├── .gitignore
+└── data/
+    ├── raw/
+    └── processed/
+```
