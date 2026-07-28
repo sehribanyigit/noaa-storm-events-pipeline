@@ -21,9 +21,9 @@ YEAR="${1:-2025}"
 # NOAA file naming pattern. The "c{CREATED_DATE}" portion changes when NOAA
 # republishes a year. Look at https://www.ncei.noaa.gov/data/storm-events/files/
 # and update CREATED_DATE for the year you want.
-CREATED_DATE="20250101"
+CREATED_DATE="20260728"
 
-BASE_URL="https://www.ncei.noaa.gov/data/storm-events/files"
+BASE_URL="https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles"
 FILE_NAME="StormEvents_details-ftp_v1.0_d${YEAR}_c${CREATED_DATE}.csv.gz"
 URL="${BASE_URL}/${FILE_NAME}"
 
@@ -83,21 +83,73 @@ echo
 # -----------------------------------------------------------------------------
 
 echo "[4/4] Converting to GeoParquet"
-# [TODO] Use ogr2ogr to convert RAW_CSV into a GeoParquet file at OUT_PARQUET.
-#
-# The CSV uses BEGIN_LON / BEGIN_LAT for the storm start point. ogr2ogr can
-# pick those up if you tell it the column names with -oo:
-#
-#   -oo X_POSSIBLE_NAMES=BEGIN_LON
-#   -oo Y_POSSIBLE_NAMES=BEGIN_LAT
-#
-# The data is in WGS 84 (EPSG:4326). Set that explicitly with -a_srs.
-#
-# Use -f Parquet for the output format.
-#
-# Tip: ask your AI pair (see R1.3 prompts 4 and 6) for the exact ogr2ogr
-# command, then verify the flags against `ogr2ogr --help` before running.
 
-echo "Done. Output: ${OUT_PARQUET}"
-echo "Open it in DuckDB:"
-echo "  duckdb -c \"INSTALL spatial; LOAD spatial; SELECT COUNT(*) FROM read_parquet('${OUT_PARQUET}');\""
+# Convert the CSV into a spatial GeoParquet dataset.
+# The CSV stores longitude and latitude as separate columns.
+# ogr2ogr creates Point geometries and writes them to a GeoParquet file.
+if [[ ! -f "$OUT_PARQUET" ]]; then
+    ogr2ogr \
+        -f Parquet "$OUT_PARQUET" \
+        "$RAW_CSV" \
+        -oo X_POSSIBLE_NAMES=BEGIN_LON \
+        -oo Y_POSSIBLE_NAMES=BEGIN_LAT \
+        -a_srs EPSG:4326
+
+    echo "✓ GeoParquet created successfully."
+else
+    echo "✓ GeoParquet already exists. Skipping conversion."
+fi
+
+# ---------------------------------------------------------------------------
+# Step 5: Validate the GeoParquet output
+# ---------------------------------------------------------------------------
+
+echo
+echo "[5/5] Validating GeoParquet output"
+
+# Make sure DuckDB is installed before running validation queries.
+if ! command -v duckdb >/dev/null 2>&1; then
+    echo "Error: DuckDB is not installed or not available in PATH."
+    exit 1
+fi
+
+# Query the output dataset and return:
+#   - total number of records
+#   - number of records containing a valid geometry
+VALIDATION_RESULT=$(duckdb -csv -noheader -c "
+INSTALL spatial;
+LOAD spatial;
+
+SELECT
+    COUNT(*) AS total_rows,
+    COUNT(geometry) AS geometry_rows
+FROM read_parquet('${OUT_PARQUET}');
+")
+
+# Split the CSV output into two Bash variables.
+IFS=',' read -r TOTAL_ROWS GEOMETRY_ROWS <<< "$VALIDATION_RESULT"
+
+# Ensure the output dataset is not empty.
+if [[ "$TOTAL_ROWS" -eq 0 ]]; then
+    echo "Error: GeoParquet contains no records."
+    exit 1
+fi
+
+# Ensure geometries were successfully created.
+if [[ "$GEOMETRY_ROWS" -eq 0 ]]; then
+    echo "Error: No valid geometries were found."
+    exit 1
+fi
+
+echo "✓ GeoParquet validation completed."
+echo "  Total records         : ${TOTAL_ROWS}"
+echo "  Records with geometry : ${GEOMETRY_ROWS}"
+
+# ---------------------------------------------------------------------------
+# Pipeline summary
+# ---------------------------------------------------------------------------
+
+echo
+echo "✓ Pipeline completed and validated successfully."
+echo "Output file : ${OUT_PARQUET}"
+echo "File size   : $(du -h "${OUT_PARQUET}" | cut -f1)"
