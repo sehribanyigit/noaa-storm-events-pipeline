@@ -1,10 +1,12 @@
-# NOAA Storms Pipeline
+# NOAA Storm Events Pipeline
 
 A one-command pipeline that downloads a year of NOAA Storm Events data, converts it to GeoParquet, and lands it ready for analysis in DuckDB, GeoPandas, or QGIS.
 
 ## What it does
 
-`pipeline.sh` takes a year (default: 2025), pulls the raw `details` file from NOAA's public archive, decompresses it, and converts it into a single analysis-ready GeoParquet dataset at `data/processed/storms_events_{YEAR}.parquet`.
+`pipeline.sh` takes a year (default: 2025), pulls the raw `details` file from NOAA's public archive, decompresses it, and converts it into a single analysis-ready GeoParquet dataset at `data/processed/storm_events_{YEAR}.parquet`.
+
+> **Note:** This pipeline is configured for the current 2025 NOAA Storm Events archive. NOAA periodically republishes archive files with updated filenames (`CREATED_DATE`). If the archive filename changes, you may need to update the `CREATED_DATE` variable in `pipeline.sh`.
 
 Typical runtime:
 
@@ -24,7 +26,7 @@ Requires:
 - GDAL (`ogr2ogr`)
 - curl
 - gunzip
-- DuckDB *(optional, used for output validation)*
+- DuckDB (used for output validation)
 
 ```bash
 git clone https://github.com/sehribanyigit/noaa-storm-events-pipeline.git

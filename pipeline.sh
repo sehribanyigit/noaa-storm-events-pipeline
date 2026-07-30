@@ -122,7 +122,7 @@ fi
 
 # Query the output dataset and return:
 #   - total number of records
-#   - number of records containing a valid geometry
+#   - number of records containing a non-null geometry
 VALIDATION_RESULT=$(duckdb -csv -noheader -c "
 INSTALL spatial;
 LOAD spatial;
@@ -144,7 +144,7 @@ fi
 
 # Ensure geometries were successfully created.
 if [[ "$GEOMETRY_ROWS" -eq 0 ]]; then
-    echo "Error: No valid geometries were found."
+    echo "Error: No records with geometry were found."
     exit 1
 fi
 
