@@ -49,7 +49,7 @@ To process a specific year:
 
 - Building an automated pipeline is more than downloading and converting data. I learned that making the workflow idempotent so it can be safely rerun without repeating unnecessary work.
 
-- Validating the GeoParquet output with DuckDB revealed that only about **44K of 72K** records contained valid coordinates. This reinforced the importance of verifying data quality instead of assuming every record can be converted into a spatial feature.
+- Validating the GeoParquet output with DuckDB revealed that only about **44K of 72K** records contained coordinates that were successfully converted into point geometries. This reinforced the importance of verifying data quality instead of assuming every record can be converted into a spatial feature.
 
 - NOAA occasionally republishes annual datasets with updated filenames, which can break automated downloads. Keeping configuration values explicit made the pipeline easier to maintain and adapt when the source data changed.
 
